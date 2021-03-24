@@ -505,28 +505,26 @@ class SpotWave:
         """
         self._send_command(f"set_acq thr {microvolts}")
 
+    def set_logging_mode(self, enabled: bool):
+        """
+        Enable/disable data log mode.
+
+        Args:
+            enabled: Set to `True` to enable logging mode
+        """
+        self._send_command(f"set_data_log enabled {int(enabled)}")
+
     def start_acquisition(self):
         """Start acquisition."""
         logger.info("Start acquisition")
-        self._send_command("set_acq enabled 1")
+        self._send_command("start_acq")
 
     def stop_acquisition(self):
         """Stop acquisition."""
         logger.info("Stop acquisition")
-        self._send_command("set_acq enabled 0")
+        self._send_command("stop_acq")
 
-    def get_ae_data(self) -> List[AERecord]:
-        """
-        Get AE data records.
-
-        Todo:
-            - Implement parsing of record start marker
-
-        Returns:
-            List of AE data records (either status or hit data)
-        """
-        self._send_command("get_ae_data")
-
+    def _read_ae_data(self) -> List[AERecord]:
         records = []
         while True:
             line = self._ser.readline()
@@ -558,6 +556,19 @@ class SpotWave:
                 logger.warning(f"Unknown AE data record: {line}")
 
         return records
+
+    def get_ae_data(self) -> List[AERecord]:
+        """
+        Get AE data records.
+
+        Todo:
+            - Implement parsing of record start marker
+
+        Returns:
+            List of AE data records (either status or hit data)
+        """
+        self._send_command("get_ae_data")
+        return self._read_ae_data()
 
     def get_tr_data(self, raw: bool = False) -> List[TRRecord]:
         """
@@ -655,3 +666,17 @@ class SpotWave:
         if raw:
             return adc_values
         return np.multiply(adc_values, self._adc_to_volts, dtype=np.float32)
+
+    def get_data_log(self) -> List[AERecord]:
+        """
+        Get logged AE data records data from internal memory
+
+        Returns:
+            List of AE data records (either status or hit data)
+        """
+        self._send_command("get_data_log")
+        return self._read_ae_data()
+
+    def clear_data_log(self):
+        """Clear logged data from internal memory."""
+        self._send_command("clear_data_log")

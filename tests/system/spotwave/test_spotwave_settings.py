@@ -170,3 +170,16 @@ def test_set_datetime(sw):
 def test_threshold(sw, set_, expect):
     sw.set_threshold(set_)
     assert sw.get_setup().threshold_volts == expect / 1e6
+
+
+@mark.parametrize(
+    "set_, expect",
+    (
+        (False, False),
+        (True, True),
+    ),
+)
+def test_set_logging_mode(sw, set_, expect):
+    sw.clear_data_log();  # logging can not be enabled if internal memory isn't cleared
+    sw.set_logging_mode(set_)
+    assert sw.get_setup().logging == expect

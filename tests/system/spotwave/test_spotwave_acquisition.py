@@ -21,22 +21,23 @@ def test_get_data(sw, samples):
 
 
 def test_acq_only_status(sw):
-    status_interval_seconds = 0.01  # 10 ms
+    status_interval_seconds = 0.1  # 100 ms
 
     sw.set_threshold(10_000_000)  # above range
     sw.set_continuous_mode(False)
-    sw.set_tr_enabled(False)
+    sw.set_logging_mode(False)
     sw.set_status_interval(status_interval_seconds)
+    sw.set_tr_enabled(False)
     sw.clear_buffer()
     sw.start_acquisition()
-    sleep(0.1)
+    sleep(1)
     sw.stop_acquisition()
 
     ae_data = list(sw.get_ae_data())
-    assert len(ae_data) == pytest.approx(9, abs=1)
+    assert len(ae_data) == pytest.approx(1 / status_interval_seconds, abs=1)
 
     for i, record in enumerate(ae_data, start=1):
-        assert record.time == i * status_interval_seconds
+        assert record.time == pytest.approx(i * status_interval_seconds)
         assert record.type_ == "S"
         assert record.duration == status_interval_seconds
         assert record.trai == 0
@@ -48,10 +49,11 @@ def test_acq_continuous(sw, tr_enabled):
     acq_duration = 0.1
 
     sw.set_continuous_mode(True)
+    sw.set_logging_mode(False)
     sw.set_ddt(ddt_seconds * 1e6)
+    sw.set_status_interval(0)
     sw.set_tr_enabled(tr_enabled)
     sw.set_tr_decimation(1)
-    sw.set_status_interval(0)
     sw.clear_buffer()
     sw.start_acquisition()
     sleep(acq_duration)
@@ -97,3 +99,41 @@ def test_acq_continuous_tr_loss(sw, ddt_us, decimation, duration_acq):
             assert record.trai != 0, f"TR loss after {record.time} seconds"
         if record.time > duration_acq:
             break
+
+
+def test_logging_only_status(sw, duration_acq):
+    status_interval_seconds = 0.1  # 100 ms
+
+    sw.clear_data_log()
+    sw.set_datetime()
+    sw.set_continuous_mode(False)
+    sw.set_logging_mode(True)
+    sw.set_status_interval(status_interval_seconds)
+    sw.set_threshold(10_000_000)  # above range
+    assert sw.get_setup().logging == True
+
+    sw.start_acquisition()
+    sleep(duration_acq)
+    sw.stop_acquisition()
+
+    ae_data = list(sw.get_data_log())
+    assert len(ae_data) == pytest.approx(duration_acq / status_interval_seconds, abs=1)
+
+
+def test_logging_continuous(sw, duration_acq):
+    ddt_seconds = 0.01  # 10 ms
+
+    sw.clear_data_log()
+    sw.set_datetime()
+    sw.set_continuous_mode(True)
+    sw.set_logging_mode(True)
+    sw.set_ddt(ddt_seconds * 1e6)
+    sw.set_status_interval(0)
+    assert sw.get_setup().logging == True
+
+    sw.start_acquisition()
+    sleep(duration_acq)
+    sw.stop_acquisition()
+
+    ae_data = list(sw.get_data_log())
+    assert len(ae_data) == pytest.approx(duration_acq / ddt_seconds, abs=1)

@@ -186,6 +186,11 @@ def test_commands_without_response(serial_mock):
     sw.set_continuous_mode(True)
     assert_write(b"set_acq cont 1\n")
 
+    sw.set_logging_mode(True)
+    assert_write(b"set_data_log enabled 1\n")
+    sw.set_logging_mode(False)
+    assert_write(b"set_data_log enabled 0\n")
+
     sw.set_ddt(400)
     assert_write(b"set_acq ddt 400\n")
 
@@ -224,10 +229,10 @@ def test_commands_without_response(serial_mock):
     assert_write(b"set_acq thr 100\n")
 
     sw.start_acquisition()
-    assert_write(b"set_acq enabled 1\n")
+    assert_write(b"start_acq\n")
 
     sw.stop_acquisition()
-    assert_write(b"set_acq enabled 0\n")
+    assert_write(b"stop_acq\n")
 
 
 def test_get_ae_data(serial_mock):
